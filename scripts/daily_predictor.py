@@ -17,8 +17,31 @@ warnings.filterwarnings('ignore')
 # デバイス設定
 device = torch.device('cpu')
 
+# グローバル変数として機種マスターを保持
+MACHINE_MASTER = None
+
 def print_log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
+
+def load_machine_master():
+    """機種マスターデータを一度だけ読み込む"""
+    global MACHINE_MASTER
+    if MACHINE_MASTER is not None:
+        return MACHINE_MASTER
+    
+    if os.path.exists('data/machine_master.csv'):
+        try:
+            MACHINE_MASTER = pd.read_csv('data/machine_master.csv', encoding='utf-8-sig')
+            print_log(f"Machine master loaded: {len(MACHINE_MASTER)} records")
+            print_log(f"Columns: {list(MACHINE_MASTER.columns)}")
+            print_log(f"Sample data:\n{MACHINE_MASTER.head()}")
+            return MACHINE_MASTER
+        except Exception as e:
+            print_log(f"Error loading machine master: {e}")
+    else:
+        print_log("Machine master file not found at data/machine_master.csv")
+    
+    return None
 
 # 正確なモデルアーキテクチャ（run_quantile_loss_model.pyと完全一致）
 class LightweightTransformerLSTM(nn.Module):
@@ -97,30 +120,19 @@ def clean_and_prepare_data(df):
 def get_machine_type_from_data(data, machine_num):
     """データから機種名を取得（マスターデータを優先）"""
     # マスターデータから優先的に取得
-    if os.path.exists('data/machine_master.csv'):
-        try:
-            master = pd.read_csv('data/machine_master.csv', encoding='utf-8-sig')
-            # 最初の1台目だけ詳細ログ
-            if machine_num == 1:
-                print_log(f"Machine master loaded: {len(master)} records, columns: {list(master.columns)}")
-                print_log(f"First 5 rows of master:\n{master.head()}")
-            
-            if 'machine_number' in master.columns and 'machine_type' in master.columns:
-                machine_info = master[master['machine_number'] == machine_num]
-                if len(machine_info) > 0:
-                    machine_type = str(machine_info.iloc[0]['machine_type'])
-                    # 最初の5台だけログ出力
-                    if machine_num <= 5:
-                        print_log(f"Machine {machine_num}: Found type '{machine_type}' in master")
-                    return machine_type
-                else:
-                    if machine_num <= 5:
-                        print_log(f"Machine {machine_num}: Not found in master data")
-        except Exception as e:
-            print_log(f"Warning: Could not read machine master: {e}")
-    else:
-        if machine_num == 1:
-            print_log(f"Warning: Machine master file not found at data/machine_master.csv")
+    master = load_machine_master()
+    if master is not None:
+        if 'machine_number' in master.columns and 'machine_type' in master.columns:
+            machine_info = master[master['machine_number'] == machine_num]
+            if len(machine_info) > 0:
+                machine_type = str(machine_info.iloc[0]['machine_type'])
+                # 最初の5台だけログ出力
+                if machine_num <= 5:
+                    print_log(f"Machine {machine_num}: Found type '{machine_type}' in master")
+                return machine_type
+            else:
+                if machine_num <= 5:
+                    print_log(f"Machine {machine_num}: Not found in master data")
     
     # データに機種名がある場合
     if 'machine_type' in data.columns and 'machine_number' in data.columns:
@@ -331,6 +343,10 @@ def main():
     print_log("=== PERFECT PREDICTION SYSTEM ===")
     print_log("Using Quantile Loss Model (MAE: 15.7957%)")
     print_log(f"Execution time: {datetime.now()}")
+    
+    # 機種マスターを先に読み込む
+    print_log("Loading machine master data...")
+    load_machine_master()
     
     # データ読み込み
     data = load_data_intelligently()
