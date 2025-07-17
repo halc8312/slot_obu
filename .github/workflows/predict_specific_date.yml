@@ -1,0 +1,185 @@
+name: Predict Specific Date
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: '予測対象日 (YYYY-MM-DD)'
+        required: false
+        type: string
+      prediction_type:
+        description: '予測タイプ'
+        required: true
+        default: 'single'
+        type: choice
+        options:
+          - single    # 特定の1日
+          - week      # 1週間
+          - month     # 特定月の1の付く日
+          - special   # 次の1の付く日
+      month:
+        description: '月指定 (YYYY-MM) ※monthタイプの場合のみ'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  predict-custom:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
+        pip install pandas numpy scikit-learn beautifulsoup4 requests joblib matplotlib seaborn
+    
+    - name: Download model files
+      run: |
+        # モデルファイルのダウンロード
+        mkdir -p model_files_for_upload
+        cd model_files_for_upload
+        
+        # Release v1からダウンロード
+        wget https://github.com/halc8312/slot_obu/releases/download/quantile-model-v1/quantile_loss_model.pth
+        wget https://github.com/halc8312/slot_obu/releases/download/quantile-model-v1/quantile_feature_scaler.joblib
+        wget https://github.com/halc8312/slot_obu/releases/download/quantile-model-v1/quantile_model_params.joblib
+        wget https://github.com/halc8312/slot_obu/releases/download/quantile-model-v1/machine_master.csv
+        
+        cd ..
+        
+        # データディレクトリの準備
+        mkdir -p data
+        cp model_files_for_upload/machine_master.csv data/
+        
+        echo "=== Downloaded files ==="
+        ls -la model_files_for_upload/
+    
+    - name: Run prediction
+      run: |
+        # 予測タイプに応じてコマンドを実行
+        case "${{ github.event.inputs.prediction_type }}" in
+          "single")
+            if [ -n "${{ github.event.inputs.target_date }}" ]; then
+              echo "指定日付: ${{ github.event.inputs.target_date }}"
+              python predict_any_date.py "${{ github.event.inputs.target_date }}" --visualize
+            else
+              echo "明日を予測"
+              python predict_any_date.py --visualize
+            fi
+            ;;
+          "week")
+            echo "今後1週間を予測"
+            python predict_any_date.py --week
+            ;;
+          "month")
+            if [ -n "${{ github.event.inputs.month }}" ]; then
+              echo "月の1の付く日を予測: ${{ github.event.inputs.month }}"
+              python predict_any_date.py --month "${{ github.event.inputs.month }}"
+            else
+              echo "エラー: monthタイプには月の指定が必要です"
+              exit 1
+            fi
+            ;;
+          "special")
+            echo "次の1の付く日を予測"
+            python predict_any_date.py --next-special --visualize
+            ;;
+        esac
+    
+    - name: Create report
+      run: |
+        # レポート用ディレクトリ作成
+        mkdir -p custom_reports
+        
+        # 予測結果とグラフをコピー
+        cp predictions_*.csv custom_reports/ || true
+        cp prediction_analysis_*.png custom_reports/ || true
+        cp report_*.md custom_reports/ || true
+        
+        # HTMLレポート生成
+        cat > custom_reports/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html lang="ja">
+        <head>
+            <meta charset="UTF-8">
+            <title>カスタム予測結果</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                h1 { color: #333; }
+                .info { background: #f0f0f0; padding: 10px; border-radius: 5px; }
+                .special { color: red; font-weight: bold; }
+                img { max-width: 100%; height: auto; }
+            </style>
+        </head>
+        <body>
+            <h1>パチスロ予測結果 - カスタム日付</h1>
+            <div class="info">
+                <p>予測タイプ: ${{ github.event.inputs.prediction_type }}</p>
+                <p>実行日時: $(date '+%Y-%m-%d %H:%M:%S')</p>
+        EOF
+        
+        if [ "${{ github.event.inputs.prediction_type }}" = "single" ] && [ -n "${{ github.event.inputs.target_date }}" ]; then
+          echo "<p>対象日: ${{ github.event.inputs.target_date }}</p>" >> custom_reports/index.html
+        fi
+        
+        cat >> custom_reports/index.html << 'EOF'
+            </div>
+            
+            <h2>予測結果</h2>
+            <p>CSVファイルで詳細な予測結果を確認できます。</p>
+            
+            <h3>ダウンロード</h3>
+            <ul>
+        EOF
+        
+        # CSVファイルのリンクを追加
+        for csv in custom_reports/*.csv; do
+          if [ -f "$csv" ]; then
+            filename=$(basename "$csv")
+            echo "<li><a href='$filename'>$filename</a></li>" >> custom_reports/index.html
+          fi
+        done
+        
+        echo "</ul>" >> custom_reports/index.html
+        
+        # グラフがあれば表示
+        for png in custom_reports/*.png; do
+          if [ -f "$png" ]; then
+            filename=$(basename "$png")
+            echo "<h3>分析グラフ</h3>" >> custom_reports/index.html
+            echo "<img src='$filename' alt='予測分析'>" >> custom_reports/index.html
+          fi
+        done
+        
+        echo "</body></html>" >> custom_reports/index.html
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: custom-prediction-${{ github.event.inputs.prediction_type }}-${{ github.run_id }}
+        path: |
+          custom_reports/*
+          predictions_*.csv
+          prediction_analysis_*.png
+        retention-days: 30
+    
+    - name: Deploy to GitHub Pages (optional)
+      if: github.event.inputs.prediction_type == 'special'
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./custom_reports
+        destination_dir: special-days
+        keep_files: true

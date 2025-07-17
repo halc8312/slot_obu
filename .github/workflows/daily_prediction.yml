@@ -61,7 +61,15 @@ jobs:
       run: python scripts/daily_data_collector.py
     
     - name: Run prediction
-      run: python scripts/daily_predictor.py
+      run: |
+        # 通常の明日の予測
+        python scripts/daily_predictor.py
+        
+        # 明日が「1の付く日」の場合は特別な通知
+        TOMORROW=$(date -d tomorrow +%d)
+        if [[ "$TOMORROW" == "01" || "$TOMORROW" == "11" || "$TOMORROW" == "21" || "$TOMORROW" == "31" ]]; then
+          echo "::notice title=特別日::明日は「1の付く日」です！高出率が期待できます。"
+        fi
     
     - name: Generate report
       run: python scripts/report_generator.py
