@@ -35,6 +35,14 @@ def load_machine_master():
             print_log(f"Machine master loaded: {len(MACHINE_MASTER)} records")
             print_log(f"Columns: {list(MACHINE_MASTER.columns)}")
             print_log(f"Sample data:\n{MACHINE_MASTER.head()}")
+            # 特定の機械番号をチェック
+            test_machines = [419, 418, 417]
+            for m in test_machines:
+                test_row = MACHINE_MASTER[MACHINE_MASTER['machine_number'] == m]
+                if len(test_row) > 0:
+                    print_log(f"Machine {m} in master: {test_row.iloc[0]['machine_type']}")
+                else:
+                    print_log(f"Machine {m} NOT FOUND in master")
             return MACHINE_MASTER
         except Exception as e:
             print_log(f"Error loading machine master: {e}")
@@ -145,17 +153,17 @@ def get_machine_type_from_data(data, machine_num):
     # デフォルトの機種名（これは使わないようにしたい）
     print_log(f"Warning: Using default machine type for machine {machine_num}")
     if machine_num <= 100:
-        return f"Aタイプ機種{machine_num % 10 + 1}"
+        return f"パチスロ{machine_num}"
     elif machine_num <= 200:
-        return f"ART機{machine_num % 10 + 1}"
+        return f"ART機{machine_num - 100}"
     elif machine_num <= 300:
-        return f"AT機{machine_num % 10 + 1}"
+        return f"AT機{machine_num - 200}"
     elif machine_num <= 400:
-        return f"ジャグラー系{machine_num % 10 + 1}"
+        return f"パチスロ{machine_num - 300}"
     elif machine_num <= 500:
-        return f"甘デジ{machine_num % 10 + 1}"
+        return f"パチスロ{machine_num - 400}"
     else:
-        return f"その他機種{machine_num % 10 + 1}"
+        return f"パチスロ{machine_num - 500}"
 
 def create_features_exact(df):
     """訓練時と完全に同じ特徴量作成"""
