@@ -35,18 +35,20 @@ def get_machine_type(machine_number):
     if os.path.exists('data/machine_master.csv'):
         try:
             master_df = pd.read_csv('data/machine_master.csv', encoding='utf-8-sig')
-            machine_info = master_df[master_df['machine_number'] == machine_number]
-            if len(machine_info) > 0:
-                return machine_info.iloc[0]['machine_type']
-        except:
-            pass
+            if 'machine_number' in master_df.columns and 'machine_type' in master_df.columns:
+                machine_info = master_df[master_df['machine_number'] == machine_number]
+                if len(machine_info) > 0:
+                    return str(machine_info.iloc[0]['machine_type'])
+        except Exception as e:
+            print_log(f"Warning: Could not read machine type from master: {e}")
     
-    # マッピングから取得
+    # マスターファイルがない場合のみマッピングから取得
     if machine_number in MACHINE_TYPE_MAPPING:
         return MACHINE_TYPE_MAPPING[machine_number]
     
-    # デフォルトの機種名
-    elif machine_number <= 100:
+    # デフォルトの機種名（マスターファイルがない場合のみ）
+    print_log(f"Warning: Using default machine type for machine {machine_number}")
+    if machine_number <= 100:
         return f"Aタイプ機種{machine_number % 10 + 1}"
     elif machine_number <= 200:
         return f"ART機{machine_number % 10 + 1}"
@@ -106,10 +108,12 @@ def save_machine_master():
 def main():
     print_log("=== Enhanced Data Collection ===")
     
-    # 機種マスターデータの作成/更新
+    # 機種マスターデータの作成/更新（既に存在する場合はスキップ）
     if not os.path.exists('data/machine_master.csv'):
         print_log("Creating machine master data...")
         save_machine_master()
+    else:
+        print_log("Machine master data already exists, skipping creation")
     
     # 昨日のデータを収集
     yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')

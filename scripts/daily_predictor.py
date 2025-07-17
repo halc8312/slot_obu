@@ -95,25 +95,28 @@ def clean_and_prepare_data(df):
     return df_clean
 
 def get_machine_type_from_data(data, machine_num):
-    """データから機種名を取得"""
-    # データに機種名がある場合
-    if 'machine_type' in data.columns and 'machine_number' in data.columns:
-        machine_data = data[data['machine_number'] == machine_num]
-        if len(machine_data) > 0 and 'machine_type' in machine_data.columns:
-            return str(machine_data.iloc[-1]['machine_type'])
-    
-    # マスターデータから取得
+    """データから機種名を取得（マスターデータを優先）"""
+    # マスターデータから優先的に取得
     if os.path.exists('data/machine_master.csv'):
         try:
-            master = pd.read_csv('data/machine_master.csv')
+            master = pd.read_csv('data/machine_master.csv', encoding='utf-8-sig')
             if 'machine_number' in master.columns and 'machine_type' in master.columns:
                 machine_info = master[master['machine_number'] == machine_num]
                 if len(machine_info) > 0:
                     return str(machine_info.iloc[0]['machine_type'])
-        except:
-            pass
+        except Exception as e:
+            print_log(f"Warning: Could not read machine master: {e}")
     
-    # デフォルトの機種名
+    # データに機種名がある場合
+    if 'machine_type' in data.columns and 'machine_number' in data.columns:
+        machine_data = data[data['machine_number'] == machine_num]
+        if len(machine_data) > 0 and 'machine_type' in machine_data.columns:
+            machine_type = machine_data.iloc[-1]['machine_type']
+            if pd.notna(machine_type) and str(machine_type) != 'nan':
+                return str(machine_type)
+    
+    # デフォルトの機種名（これは使わないようにしたい）
+    print_log(f"Warning: Using default machine type for machine {machine_num}")
     if machine_num <= 100:
         return f"Aタイプ機種{machine_num % 10 + 1}"
     elif machine_num <= 200:
@@ -263,22 +266,38 @@ def predict_with_perfect_model(model, scaler, data, model_params):
 
 def load_data_intelligently():
     """データの賢い読み込み"""
-    # 優先順位でデータを探す
+    # 優先順位でデータを探す（最新データを優先）
     data_sources = [
-        ('final_integrated_13months_data.csv', 'Full training data'),
         ('data/latest_data.csv', 'Latest collected data'),
+        ('data/integrated_historical_data.csv', 'Integrated historical data'),
+        ('final_integrated_13months_data.csv', 'Full training data'),
         ('predictions/historical_data.csv', 'Historical predictions')
     ]
     
+    loaded_data = None
     for file_path, description in data_sources:
         if os.path.exists(file_path):
             print_log(f"Loading {description} from {file_path}")
             try:
                 df = pd.read_csv(file_path, encoding='utf-8-sig')
                 print_log(f"Loaded {len(df)} records")
-                return df
+                # machine_typeカラムがない場合は追加
+                if 'machine_type' not in df.columns:
+                    print_log("Adding machine_type column from machine master")
+                    if os.path.exists('data/machine_master.csv'):
+                        master = pd.read_csv('data/machine_master.csv', encoding='utf-8-sig')
+                        # machine_numberでマージ
+                        if 'machine_number' in df.columns and 'machine_number' in master.columns:
+                            df = df.merge(master[['machine_number', 'machine_type']], 
+                                        on='machine_number', how='left')
+                            print_log("Machine types merged successfully")
+                loaded_data = df
+                break
             except Exception as e:
                 print_log(f"Error loading {file_path}: {e}")
+    
+    if loaded_data is not None:
+        return loaded_data
     
     # フォールバック：最小限のデータ
     print_log("No data found, creating minimal dataset")
