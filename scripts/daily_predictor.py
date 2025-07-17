@@ -74,7 +74,7 @@ def clean_and_prepare_data(df):
     
     # 数値データのクリーニング
     for col in df_clean.columns:
-        if df_clean[col].dtype == 'object' and col != 'date':
+        if df_clean[col].dtype == 'object' and col not in ['date', 'machine_type']:
             # %記号を含む文字列を数値に変換
             if df_clean[col].astype(str).str.contains('%', na=False).any():
                 df_clean[col] = df_clean[col].astype(str).str.replace('%', '').astype(float)
@@ -84,6 +84,39 @@ def clean_and_prepare_data(df):
         df_clean['date'] = pd.to_datetime(df_clean['date'])
     
     return df_clean
+
+def get_machine_type_from_data(data, machine_num):
+    """データから機種名を取得"""
+    # データに機種名がある場合
+    if 'machine_type' in data.columns and 'machine_number' in data.columns:
+        machine_data = data[data['machine_number'] == machine_num]
+        if len(machine_data) > 0 and 'machine_type' in machine_data.columns:
+            return str(machine_data.iloc[-1]['machine_type'])
+    
+    # マスターデータから取得
+    if os.path.exists('data/machine_master.csv'):
+        try:
+            master = pd.read_csv('data/machine_master.csv')
+            if 'machine_number' in master.columns and 'machine_type' in master.columns:
+                machine_info = master[master['machine_number'] == machine_num]
+                if len(machine_info) > 0:
+                    return str(machine_info.iloc[0]['machine_type'])
+        except:
+            pass
+    
+    # デフォルトの機種名
+    if machine_num <= 100:
+        return f"Aタイプ機種{machine_num % 10 + 1}"
+    elif machine_num <= 200:
+        return f"ART機{machine_num % 10 + 1}"
+    elif machine_num <= 300:
+        return f"AT機{machine_num % 10 + 1}"
+    elif machine_num <= 400:
+        return f"ジャグラー系{machine_num % 10 + 1}"
+    elif machine_num <= 500:
+        return f"甘デジ{machine_num % 10 + 1}"
+    else:
+        return f"その他機種{machine_num % 10 + 1}"
 
 def create_features_exact(df):
     """訓練時と完全に同じ特徴量作成"""
@@ -204,8 +237,12 @@ def predict_with_perfect_model(model, scaler, data, model_params):
         if is_special:
             pred_rate *= 1.114
         
+        # 機種名を取得
+        machine_type = get_machine_type_from_data(data, machine_num)
+        
         predictions.append({
             'machine_number': machine_num,
+            'machine_type': machine_type,
             'predicted_rate': float(pred_rate),
             'special_day': is_special,
             'model_confidence': 'high' if 'uncertainty' in locals() else 'medium'
@@ -318,7 +355,8 @@ def main():
         special_mark = "★" if row['special_day'] else " "
         confidence = "◆" if row['model_confidence'] == 'high' else "◇"
         
-        print_log(f"{rank:2d}. {confidence} Machine {row['machine_number']:3d}: {row['predicted_rate']:6.2f}% {special_mark}")
+        machine_type = row.get('machine_type', 'Unknown')
+        print_log(f"{rank:2d}. {confidence} No.{row['machine_number']:3d} [{machine_type:20s}]: {row['predicted_rate']:6.2f}% {special_mark}")
     
     # 統計情報
     stats = {

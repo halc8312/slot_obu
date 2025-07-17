@@ -140,6 +140,7 @@ def generate_html_report(predictions_df, date, stats):
                 <tr>
                     <th>順位</th>
                     <th>機械番号</th>
+                    <th>機種名</th>
                     <th>予測出率</th>
                     <th>評価</th>
                 </tr>
@@ -154,10 +155,13 @@ def generate_html_report(predictions_df, date, stats):
         
         evaluation = "★★★" if row['predicted_rate'] > 105 else "★★" if row['predicted_rate'] > 100 else "★"
         
+        machine_type = row.get('machine_type', 'Unknown')
+        
         html += f"""
                 <tr>
                     <td class="{rank_class}">{rank}</td>
                     <td>No.{row['machine_number']}</td>
+                    <td>{machine_type}</td>
                     <td class="{rate_class}">{row['predicted_rate']:.1f}%</td>
                     <td>{evaluation}</td>
                 </tr>
