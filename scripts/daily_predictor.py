@@ -100,12 +100,27 @@ def get_machine_type_from_data(data, machine_num):
     if os.path.exists('data/machine_master.csv'):
         try:
             master = pd.read_csv('data/machine_master.csv', encoding='utf-8-sig')
+            # 最初の1台目だけ詳細ログ
+            if machine_num == 1:
+                print_log(f"Machine master loaded: {len(master)} records, columns: {list(master.columns)}")
+                print_log(f"First 5 rows of master:\n{master.head()}")
+            
             if 'machine_number' in master.columns and 'machine_type' in master.columns:
                 machine_info = master[master['machine_number'] == machine_num]
                 if len(machine_info) > 0:
-                    return str(machine_info.iloc[0]['machine_type'])
+                    machine_type = str(machine_info.iloc[0]['machine_type'])
+                    # 最初の5台だけログ出力
+                    if machine_num <= 5:
+                        print_log(f"Machine {machine_num}: Found type '{machine_type}' in master")
+                    return machine_type
+                else:
+                    if machine_num <= 5:
+                        print_log(f"Machine {machine_num}: Not found in master data")
         except Exception as e:
             print_log(f"Warning: Could not read machine master: {e}")
+    else:
+        if machine_num == 1:
+            print_log(f"Warning: Machine master file not found at data/machine_master.csv")
     
     # データに機種名がある場合
     if 'machine_type' in data.columns and 'machine_number' in data.columns:

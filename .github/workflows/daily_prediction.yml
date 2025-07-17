@@ -50,6 +50,12 @@ jobs:
         # 機種マスターデータ
         mkdir -p data
         wget -O data/machine_master.csv https://github.com/halc8312/slot_obu/releases/download/quantile-model-v1/machine_master.csv || echo "Machine master not found"
+        
+        # ダウンロード確認
+        echo "=== Downloaded files ==="
+        ls -la *.pth *.joblib *.csv 2>/dev/null || echo "No model files in root"
+        echo "=== Data directory ==="
+        ls -la data/ 2>/dev/null || echo "No data directory"
     
     - name: Collect daily data
       run: python scripts/daily_data_collector.py
