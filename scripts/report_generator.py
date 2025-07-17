@@ -288,6 +288,8 @@ def main():
     
     # データ読み込み
     predictions = pd.read_csv(prediction_file)
+    print(f"[DEBUG] Loaded predictions with columns: {list(predictions.columns)}")
+    print(f"[DEBUG] First 3 rows:\n{predictions.head(3)}")
     
     # 統計情報読み込み
     with open('predictions/stats.json', 'r') as f:
