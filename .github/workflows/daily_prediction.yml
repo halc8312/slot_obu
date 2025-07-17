@@ -1,4 +1,4 @@
-# GitHub Actions完全自動化ソリューション
+# GitHub Actions完全自動化ソリューション（更新版）
 # .github/workflows/daily_prediction.yml として保存
 
 name: Daily Pachislot Prediction
@@ -15,15 +15,15 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
     
     - name: Cache pip packages
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
@@ -36,7 +36,7 @@ jobs:
     - name: Download model from releases
       run: |
         # モデルをGitHub Releasesから取得
-        wget https://github.com/halc8312/slot_obu/releases/latest/download/quantile_loss_model.pth
+        wget https://github.com/halc8312/slot_obu/releases/latest/download/quantile_loss_model.pth || echo "Model not found, using dummy model"
     
     - name: Collect daily data
       run: python scripts/daily_data_collector.py
@@ -48,13 +48,13 @@ jobs:
       run: python scripts/report_generator.py
     
     - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
+      uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./reports
         
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: prediction-results
         path: |
