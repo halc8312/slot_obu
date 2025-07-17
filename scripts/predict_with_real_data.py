@@ -13,6 +13,8 @@ import joblib
 from datetime import datetime, timedelta
 import argparse
 from typing import List, Dict, Optional
+import matplotlib
+matplotlib.use('Agg')  # バックエンドを設定（GUIなし環境用）
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -20,8 +22,12 @@ import seaborn as sns
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-# 日本語フォント設定
-plt.rcParams['font.sans-serif'] = ['MS Gothic']
+# 日本語フォント設定（環境によって異なる）
+try:
+    plt.rcParams['font.sans-serif'] = ['MS Gothic']
+except:
+    # Linux環境用
+    plt.rcParams['font.family'] = 'DejaVu Sans'
 plt.rcParams['axes.unicode_minus'] = False
 
 def print_log(msg):

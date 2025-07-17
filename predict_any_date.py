@@ -13,7 +13,9 @@ from datetime import datetime, timedelta
 import argparse
 
 # スクリプトディレクトリをパスに追加
-sys.path.append(os.path.join(os.path.dirname(__file__), 'scripts'))
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(script_dir)
+sys.path.append(os.path.join(script_dir, 'scripts'))
 
 def find_next_special_day(from_date: datetime = None) -> datetime:
     """次の「1の付く日」を見つける"""
@@ -120,7 +122,10 @@ def main():
         # 予測実行
         if args.simple or len(target_dates) > 1:
             # シンプルモード（複数日付の場合は自動的にシンプル）
-            from predict_specific_date import predict_for_date
+            try:
+                from scripts.predict_specific_date import predict_for_date
+            except ImportError:
+                from predict_specific_date import predict_for_date
             results = predict_for_date(target_date, top_n=args.top, save_csv=(len(target_dates)==1))
             
             if len(target_dates) > 1 and results is not None:
@@ -130,7 +135,10 @@ def main():
                       f"平均: {results[results['status']=='稼働中']['predicted_payout'].mean():.1f}%")
         else:
             # 詳細モード
-            from predict_with_real_data import SpecificDatePredictor
+            try:
+                from scripts.predict_with_real_data import SpecificDatePredictor
+            except ImportError:
+                from predict_with_real_data import SpecificDatePredictor
             
             predictor = SpecificDatePredictor()
             predictor.load_model()
