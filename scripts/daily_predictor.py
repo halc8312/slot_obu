@@ -75,13 +75,22 @@ def clean_and_prepare_data(df):
     # 数値データのクリーニング
     for col in df_clean.columns:
         if df_clean[col].dtype == 'object' and col not in ['date', 'machine_type']:
-            # %記号を含む文字列を数値に変換
-            if df_clean[col].astype(str).str.contains('%', na=False).any():
-                df_clean[col] = df_clean[col].astype(str).str.replace('%', '').astype(float)
+            try:
+                # %記号を含む文字列を数値に変換
+                if df_clean[col].astype(str).str.contains('%', na=False).any():
+                    # %記号と-を処理
+                    df_clean[col] = df_clean[col].astype(str).str.replace('%', '').str.replace('-', '0')
+                    df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce').fillna(0)
+                else:
+                    # その他の文字列カラム
+                    df_clean[col] = df_clean[col].astype(str).str.replace('-', '0')
+                    df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
+            except Exception as e:
+                print_log(f"Warning: Could not convert column {col}: {e}")
     
     # 日付処理
     if 'date' in df_clean.columns:
-        df_clean['date'] = pd.to_datetime(df_clean['date'])
+        df_clean['date'] = pd.to_datetime(df_clean['date'], errors='coerce')
     
     return df_clean
 
