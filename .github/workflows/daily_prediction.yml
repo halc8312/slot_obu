@@ -44,6 +44,7 @@ jobs:
         # モデルとスケーラーをGitHub Releasesから取得
         wget https://github.com/halc8312/slot_obu/releases/download/quantile-model-v1/quantile_loss_model.pth || echo "Model not found"
         wget https://github.com/halc8312/slot_obu/releases/download/quantile-model-v1/quantile_feature_scaler.joblib || echo "Scaler not found"
+        wget https://github.com/halc8312/slot_obu/releases/download/quantile-model-v1/quantile_model_params.joblib || echo "Model params not found"
         # データファイル（オプション）
         wget https://github.com/halc8312/slot_obu/releases/download/quantile-model-v1/final_integrated_13months_data.csv || echo "Data file not found"
     
