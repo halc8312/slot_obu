@@ -1,5 +1,5 @@
-# GitHub Actions完全自動化ソリューション（更新版）
-# .github/workflows/daily_prediction.yml として保存
+# 権限修正版のワークフロー
+# .github/workflows/daily_prediction.yml
 
 name: Daily Pachislot Prediction
 
@@ -8,6 +8,12 @@ on:
     # 日本時間 毎朝6:00 (UTC 21:00)
     - cron: '0 21 * * *'
   workflow_dispatch:  # 手動実行も可能
+
+# 権限を明示的に設定
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   predict:
