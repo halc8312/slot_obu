@@ -1,0 +1,63 @@
+# GitHub Actions完全自動化ソリューション
+# .github/workflows/daily_prediction.yml として保存
+
+name: Daily Pachislot Prediction
+
+on:
+  schedule:
+    # 日本時間 毎朝6:00 (UTC 21:00)
+    - cron: '0 21 * * *'
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+    
+    - name: Install dependencies
+      run: |
+        pip install torch --index-url https://download.pytorch.org/whl/cpu
+        pip install pandas numpy scikit-learn beautifulsoup4 requests
+    
+    - name: Download model from releases
+      run: |
+        # モデルをGitHub Releasesから取得
+        wget https://github.com/halc8312/slot_obu/releases/latest/download/quantile_loss_model.pth
+    
+    - name: Collect daily data
+      run: python scripts/daily_data_collector.py
+    
+    - name: Run prediction
+      run: python scripts/daily_predictor.py
+    
+    - name: Generate report
+      run: python scripts/report_generator.py
+    
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./reports
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: prediction-results
+        path: |
+          reports/*.html
+          data/*.csv
+        retention-days: 30
