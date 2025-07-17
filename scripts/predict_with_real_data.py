@@ -44,7 +44,10 @@ class SpecificDatePredictor:
         self.sequence_length = 30
         
         # 必要なインポート
-        from scripts.daily_predictor import LightweightTransformerLSTM
+        try:
+            from scripts.daily_predictor import LightweightTransformerLSTM
+        except ImportError:
+            from daily_predictor import LightweightTransformerLSTM
         self.LightweightTransformerLSTM = LightweightTransformerLSTM
         
     def load_model(self):
@@ -228,7 +231,10 @@ class SpecificDatePredictor:
             print_log(f"★ {target_date.day}日 - 特別日（1の付く日）です！")
         
         # 機種マスターの読み込み
-        from scripts.dynamic_machine_updater import DynamicMachineUpdater
+        try:
+            from scripts.dynamic_machine_updater import DynamicMachineUpdater
+        except ImportError:
+            from dynamic_machine_updater import DynamicMachineUpdater
         updater = DynamicMachineUpdater()
         master_df = updater.load_current_master()
         
@@ -439,7 +445,8 @@ class SpecificDatePredictor:
             smart_top = results_df[results_df['machine_type'].str.contains('スマスロ|^L')].head(5)
             if len(smart_top) > 0:
                 report += f"   - スマスロ系: {', '.join(smart_top['machine_number'].astype(str))}\n"
-
+            
+            report += """
 3. **立ち回り戦略**
    - 高設定の可能性が高い台を中心に
    - データカウンターで実際の出率を確認
