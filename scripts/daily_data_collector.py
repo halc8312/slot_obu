@@ -30,10 +30,22 @@ MACHINE_TYPE_MAPPING = {
 }
 
 def get_machine_type(machine_number):
-    """機種名を取得（実際はデータソースから取得）"""
-    # デフォルトの機種グループ分け
+    """機種名を取得（機種マスターから取得）"""
+    # 機種マスターデータから取得を試みる
+    if os.path.exists('data/machine_master.csv'):
+        try:
+            master_df = pd.read_csv('data/machine_master.csv', encoding='utf-8-sig')
+            machine_info = master_df[master_df['machine_number'] == machine_number]
+            if len(machine_info) > 0:
+                return machine_info.iloc[0]['machine_type']
+        except:
+            pass
+    
+    # マッピングから取得
     if machine_number in MACHINE_TYPE_MAPPING:
         return MACHINE_TYPE_MAPPING[machine_number]
+    
+    # デフォルトの機種名
     elif machine_number <= 100:
         return f"Aタイプ機種{machine_number % 10 + 1}"
     elif machine_number <= 200:

@@ -47,6 +47,9 @@ jobs:
         wget https://github.com/halc8312/slot_obu/releases/download/quantile-model-v1/quantile_model_params.joblib || echo "Model params not found"
         # データファイル（オプション）
         wget https://github.com/halc8312/slot_obu/releases/download/quantile-model-v1/final_integrated_13months_data.csv || echo "Data file not found"
+        # 機種マスターデータ
+        mkdir -p data
+        wget -O data/machine_master.csv https://github.com/halc8312/slot_obu/releases/download/quantile-model-v1/machine_master.csv || echo "Machine master not found"
     
     - name: Collect daily data
       run: python scripts/daily_data_collector.py
