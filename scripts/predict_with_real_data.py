@@ -80,17 +80,26 @@ class SpecificDatePredictor:
         """過去データを読み込む"""
         print_log(f"Loading historical data (last {days_back} days)...")
         
-        # まず統合データから読み込みを試みる
-        if os.path.exists('../final_integrated_13months_data.csv'):
-            df = pd.read_csv('../final_integrated_13months_data.csv', encoding='utf-8-sig')
-            df['date'] = pd.to_datetime(df['date'])
-            
-            # 期間でフィルタ
-            start_date = end_date - timedelta(days=days_back)
-            df = df[(df['date'] >= start_date) & (df['date'] < end_date)]
-            
-            print_log(f"Loaded {len(df)} records from integrated data")
-            return df
+        # 複数の場所から統合データの読み込みを試みる
+        data_paths = [
+            'final_integrated_13months_data.csv',  # GitHub Actionsでのパス
+            '../final_integrated_13months_data.csv',  # ローカル実行時のパス
+            'data/final_integrated_13months_data.csv',
+            '../data/final_integrated_13months_data.csv'
+        ]
+        
+        for path in data_paths:
+            if os.path.exists(path):
+                print_log(f"Found data file at: {path}")
+                df = pd.read_csv(path, encoding='utf-8-sig')
+                df['date'] = pd.to_datetime(df['date'])
+                
+                # 期間でフィルタ
+                start_date = end_date - timedelta(days=days_back)
+                df = df[(df['date'] >= start_date) & (df['date'] < end_date)]
+                
+                print_log(f"Loaded {len(df)} records from integrated data")
+                return df
         
         # 個別の日次ファイルから読み込み
         all_data = []
@@ -118,7 +127,17 @@ class SpecificDatePredictor:
             print_log(f"Loaded {len(combined_df)} records from daily files")
             return combined_df
         
+        # デバッグ情報を追加
         print_log("ERROR: No historical data found!")
+        print_log("Checked the following paths:")
+        for path in data_paths:
+            print_log(f"  - {path}: {'EXISTS' if os.path.exists(path) else 'NOT FOUND'}")
+        print_log("Current working directory: " + os.getcwd())
+        print_log("Files in current directory:")
+        for f in os.listdir('.'):
+            if f.endswith('.csv'):
+                print_log(f"  - {f}")
+        
         print_log("This system requires real historical data for accurate predictions.")
         print_log("The model was trained on 13 months of real data and cannot work with simulated data.")
         raise FileNotFoundError(
