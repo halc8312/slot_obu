@@ -45,7 +45,7 @@ jobs:
         pip install torch --index-url https://download.pytorch.org/whl/cpu
         pip install pandas numpy scikit-learn beautifulsoup4 requests joblib matplotlib seaborn
     
-    - name: Download model files
+    - name: Download model and data files
       run: |
         # モデルファイルのダウンロード
         mkdir -p model_files_for_upload
@@ -63,8 +63,18 @@ jobs:
         mkdir -p data
         cp model_files_for_upload/machine_master.csv data/
         
+        # 実データファイルのダウンロード（必須）
+        echo "Downloading historical data..."
+        wget -O final_integrated_13months_data.csv https://github.com/halc8312/slot_obu/releases/download/quantile-model-v1/final_integrated_13months_data.csv || {
+          echo "ERROR: Historical data file not found in GitHub Release!"
+          echo "This system requires real historical data for predictions."
+          echo "Please upload final_integrated_13months_data.csv to the GitHub Release."
+          exit 1
+        }
+        
         echo "=== Downloaded files ==="
         ls -la model_files_for_upload/
+        ls -la *.csv 2>/dev/null || true
     
     - name: Run prediction
       run: |

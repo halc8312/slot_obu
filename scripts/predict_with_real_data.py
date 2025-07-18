@@ -118,8 +118,14 @@ class SpecificDatePredictor:
             print_log(f"Loaded {len(combined_df)} records from daily files")
             return combined_df
         
-        print_log("Warning: No historical data found, using simulated data")
-        return self.create_simulated_data(end_date, days_back)
+        print_log("ERROR: No historical data found!")
+        print_log("This system requires real historical data for accurate predictions.")
+        print_log("The model was trained on 13 months of real data and cannot work with simulated data.")
+        raise FileNotFoundError(
+            "Historical data not found. Please ensure the data files are available:\n"
+            "- final_integrated_13months_data.csv\n"
+            "- Or daily data files in data/ directory"
+        )
     
     def create_simulated_data(self, end_date: datetime, days_back: int) -> pd.DataFrame:
         """シミュレーションデータを作成（実データがない場合）"""
